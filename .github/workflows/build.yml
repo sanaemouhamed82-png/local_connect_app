@@ -13,25 +13,11 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Build APK with Buildozer Action
+      uses: Artemis-Ames/buildozer-action@v1.4.0
       with:
-        python-version: '3.10'
-
-    - name: Install System Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ccache git libffi-dev libssl-dev python3-dev openjdk-17-jdk zip unzip
-        python -m pip install --upgrade pip setuptools
-        pip install buildozer kivy
-
-    - name: Build APK with Buildozer
-      run: |
-        buildozer init
-        sed -i 's/title = My Application/title = LocalConnect/g' buildozer.spec
-        sed -i 's/package.name = myapp/package.name = localconnect/g' buildozer.spec
-        sed -i 's/requirements = python3,kivy/requirements = python3,kivy/g' buildozer.spec
-        yes | buildozer -v android debug
+        workdir: .
+        buildozer_version: stable
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
