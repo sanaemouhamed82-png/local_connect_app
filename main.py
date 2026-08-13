@@ -1,52 +1,40 @@
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-import socket
-import json
+name: Build Android APK
 
-class LocalConnectUI(BoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', padding=20, spacing=10, **kwargs)
-        
-        self.add_widget(Label(text="Local Connect Phone", font_size='20sp', bold=True))
-        
-        self.ip_input = TextInput(text="192.168.0.190", multiline=False, size_hint_y=None, height=100)
-        self.add_widget(self.ip_input)
-        
-        self.btn_connect = Button(text="Connect to PC", size_hint_y=None, height=100)
-        self.btn_connect.bind(on_press=self.connect_to_pc)
-        self.add_widget(self.btn_connect)
-        
-        self.btn_call = Button(text="Trigger Call", size_hint_y=None, height=100)
-        self.btn_call.bind(on_press=self.trigger_call)
-        self.add_widget(self.btn_call)
-        
-        self.status_label = Label(text="Disconnected")
-        self.add_widget(self.status_label)
-        
-        self.sock = None
-        self.connected = False
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
-    def connect_to_pc(self, instance):
-        ip = self.ip_input.text.strip()
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((ip, 5000))
-            self.connected = True
-            self.status_label.text = "Connected to PC"
-        except Exception as e:
-            self.status_label.text = f"Error: {e}"
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-    def trigger_call(self, instance):
-        if self.connected and self.sock:
-            pkt = {"type": "INCOMING_CALL", "from": "Android"}
-            self.sock.sendall(json.dumps(pkt).encode('utf-8'))
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-class LocalConnectApp(App):
-    def build(self):
-        return LocalConnectUI()
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-if __name__ == '__main__':
-    LocalConnectApp().run()
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ccache git libffi-dev libssl-dev python3-dev openjdk-17-jdk zip unzip
+        python -m pip install --upgrade pip setuptools
+        pip install buildozer kivy
+
+    - name: Build APK with Buildozer
+      run: |
+        buildozer init
+        sed -i 's/title = My Application/title = LocalConnect/g' buildozer.spec
+        sed -i 's/package.name = myapp/package.name = localconnect/g' buildozer.spec
+        sed -i 's/requirements = python3,kivy/requirements = python3,kivy/g' buildozer.spec
+        buildozer -v android debug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: LocalConnect-APK
+        path: bin/*.apk
