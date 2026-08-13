@@ -11,10 +11,10 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -30,10 +30,11 @@ jobs:
         buildozer init
         sed -i 's/title = My Application/title = LocalConnect/g' buildozer.spec
         sed -i 's/package.name = myapp/package.name = localconnect/g' buildozer.spec
+        sed -i 's/requirements = python3,kivy/requirements = python3,kivy/g' buildozer.spec
         buildozer -v android debug
 
     - name: Upload APK Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: LocalConnect-APK
         path: bin/*.apk
